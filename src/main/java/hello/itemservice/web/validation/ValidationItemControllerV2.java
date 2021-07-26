@@ -45,12 +45,9 @@ public class ValidationItemControllerV2 {
         return "validation/v2/addForm";
     }
 
-    @PostMapping("/add")
+//    @PostMapping("/add")
     public String addItemV1(Item item, BindingResult result, RedirectAttributes redirectAttributes, Model model) {
-        //검증 오류 결과를 보관
-        Map<String, String> errors = new HashMap<>();
-
-        //검증 로직
+       //검증 로직
         if (!StringUtils.hasText(item.getItemName())) {
             result.addError(new FieldError("item", "itemName", "상품 이름은 필수입니다."));
         }
@@ -67,6 +64,124 @@ public class ValidationItemControllerV2 {
             if (resultPrice < 10000) {
                 result.addError(new ObjectError("item",
                         "가격 * 수량의 합은 10000원 이상이어야 합니다. 현재 값 = " + resultPrice));
+            }
+        }
+
+        //검증에 실패하면 다시 입력 폼으로
+        if (result.hasErrors()) {
+            log.info("errors = {}", result);
+            return "validation/v2/addForm";
+        }
+
+        //검증성공 로직
+        Item savedItem = itemRepository.save(item);
+        redirectAttributes.addAttribute("itemId", savedItem.getId());
+        redirectAttributes.addAttribute("status", true);
+        return "redirect:/validation/v2/items/{itemId}";
+    }
+
+//    @PostMapping("/add")
+    public String addItemV2(Item item, BindingResult result, RedirectAttributes redirectAttributes) {
+        //검증 로직
+        if (!StringUtils.hasText(item.getItemName())) {
+            result.addError(new FieldError("item", "itemName", item.getItemName(),
+                    false, null, null, "상품 이름은 필수입니다."));
+        }
+        if (item.getPrice() == null || item.getPrice() < 1000 || item.getPrice() > 1000000) {
+            result.addError(new FieldError("item", "price", item.getPrice(),
+                    false, null, null,"가격은 1000원 ~ 1000000까지 허용합니다"));
+        }
+        if (item.getQuantity() == null || item.getQuantity() >= 9999) {
+            result.addError(new FieldError("item", "quantity", item.getQuantity(),
+                    false, null, null, "수량은 최대 9999까지 허용합니다"));
+        }
+
+        //특정 필드가 아닌 복합 룰 검증
+        if (item.getPrice() != null && item.getQuantity() !=null) {
+            int resultPrice = item.getPrice() * item.getQuantity();
+            if (resultPrice < 10000) {
+                result.addError(new ObjectError("item", null, null,
+                        "가격 * 수량의 합은 10000원 이상이어야 합니다. 현재 값 = " + resultPrice));
+            }
+        }
+
+        //검증에 실패하면 다시 입력 폼으로
+        if (result.hasErrors()) {
+            log.info("errors = {}", result);
+            return "validation/v2/addForm";
+        }
+
+        //검증성공 로직
+        Item savedItem = itemRepository.save(item);
+        redirectAttributes.addAttribute("itemId", savedItem.getId());
+        redirectAttributes.addAttribute("status", true);
+        return "redirect:/validation/v2/items/{itemId}";
+    }
+
+//    @PostMapping("/add")
+    public String addItemV3(Item item, BindingResult result, RedirectAttributes redirectAttributes) {
+
+        log.info("objectName={}", result.getObjectName());
+        log.info("target={}", result.getTarget());
+
+        //검증 로직
+        if (!StringUtils.hasText(item.getItemName())) {
+            result.addError(new FieldError("item", "itemName", item.getItemName(),
+                    false, new String[]{"required.item.itemName"}, null, null));
+        }
+        if (item.getPrice() == null || item.getPrice() < 1000 || item.getPrice() > 1000000) {
+            result.addError(new FieldError("item", "price", item.getPrice(),
+                    false, new String[]{"range.item.price"}, new Object[]{1000, 1000000}, null));
+        }
+        if (item.getQuantity() == null || item.getQuantity() >= 9999) {
+            result.addError(new FieldError("item", "quantity", item.getQuantity(),
+                    false, new String[]{"max.item.quantity"}, new Object[]{9999}, null));
+        }
+
+        //특정 필드가 아닌 복합 룰 검증
+        if (item.getPrice() != null && item.getQuantity() !=null) {
+            int resultPrice = item.getPrice() * item.getQuantity();
+            if (resultPrice < 10000) {
+                result.addError(new ObjectError("item", new String[]{"totalPriceMin"},
+                        new Object[]{10000, resultPrice}, null));
+            }
+        }
+
+        //검증에 실패하면 다시 입력 폼으로
+        if (result.hasErrors()) {
+            log.info("errors = {}", result);
+            return "validation/v2/addForm";
+        }
+
+        //검증성공 로직
+        Item savedItem = itemRepository.save(item);
+        redirectAttributes.addAttribute("itemId", savedItem.getId());
+        redirectAttributes.addAttribute("status", true);
+        return "redirect:/validation/v2/items/{itemId}";
+    }
+
+    @PostMapping("/add")
+    public String addItemV4(Item item, BindingResult result, RedirectAttributes redirectAttributes) {
+
+        log.info("objectName={}", result.getObjectName());
+        log.info("target={}", result.getTarget());
+
+        //검증 로직
+        if (!StringUtils.hasText(item.getItemName())) {
+            result.rejectValue("itemName", "required");
+        }
+        if (item.getPrice() == null || item.getPrice() < 1000 || item.getPrice() > 1000000) {
+            result.rejectValue("price", "range", new Object[]{1000, 1000000}, null);
+        }
+        if (item.getQuantity() == null || item.getQuantity() >= 9999) {
+            result.rejectValue("quantity", "max", new Object[]{9999}, null);
+        }
+
+        //특정 필드가 아닌 복합 룰 검증
+        if (item.getPrice() != null && item.getQuantity() != null) {
+            int resultPrice = item.getPrice() * item.getQuantity();
+            if (resultPrice < 10000) {
+                result.reject("totalPriceMin", new Object[]{10000, resultPrice}, null);
             }
         }
 
